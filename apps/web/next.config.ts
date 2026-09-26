@@ -236,7 +236,12 @@ const nextConfig = (phase: string): NextConfig => {
     experimental: {
       optimizePackageImports: ["@calcom/ui"],
     },
-    productionBrowserSourceMaps: true,
+    // Kodar: the Vercel build must finish inside 45 min on the standard
+    // machine. Browser source maps and Next's whole-monorepo type check are
+    // the two biggest costs and neither is needed to run the app; upstream CI
+    // already type-checks the release we pin.
+    productionBrowserSourceMaps: false,
+    typescript: { ignoreBuildErrors: true },
     transpilePackages: [
       "@calcom/app-store",
       "@calcom/dayjs",
