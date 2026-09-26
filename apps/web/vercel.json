@@ -42,5 +42,24 @@
     "pages/api/trpc/workflows/[trpc].ts": {
       "maxDuration": 800
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/team/kodar-tarkvara/discovery",
+      "has": [
+        {
+          "type": "query",
+          "key": "leadId",
+          "value": "(?<lead>[0-9a-fA-F-]{36})"
+        }
+      ],
+      "destination": "/janalar/discovery?metadata[leadId]=:lead",
+      "permanent": false
+    },
+    {
+      "source": "/team/kodar-tarkvara/:path*",
+      "destination": "/janalar/discovery",
+      "permanent": false
+    }
+  ]
 }
