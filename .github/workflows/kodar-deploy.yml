@@ -35,6 +35,9 @@ jobs:
       - run: npm install -g vercel@latest
       - name: Pull Vercel project settings
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      # Sensitive vars come down as the literal "[SENSITIVE]" and would shadow the
+      # real values passed below (Cal JSON-parses some of them at build time).
+      - run: grep -vF '"[SENSITIVE]"' .vercel/.env.production.local > env.tmp && mv env.tmp .vercel/.env.production.local
       - name: Build
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
@@ -44,5 +47,6 @@ jobs:
           DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           CALENDSO_ENCRYPTION_KEY: ${{ secrets.CALENDSO_ENCRYPTION_KEY }}
+          GOOGLE_API_CREDENTIALS: ${{ secrets.GOOGLE_API_CREDENTIALS }}
       - name: Deploy
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
