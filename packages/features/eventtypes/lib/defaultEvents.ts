@@ -171,7 +171,25 @@ export const dynamicEvent = {
   metadata: eventTypeMetaDataSchemaWithTypedApps.parse({ multipleDuration: [15, 30, 45, 60, 90] }),
 };
 
-export const defaultEvents = [dynamicEvent];
+// Kodar: the shared discovery call, booked at /janalar+roven/discovery. A group
+// link books everyone in it and only offers times when all of them are free
+// (collective), which is what the enterprise "team event" would do — but this
+// path is AGPL core, so it needs no commercial licence. Without an entry here
+// the slug falls back to the generic "Group Meeting" above.
+export const kodarDiscoveryEvent = {
+  ...dynamicEvent,
+  slug: "discovery",
+  title: "Tutvumiskõne / Discovery call",
+  eventName: "Tutvumiskõne / Discovery call",
+  description:
+    "Tasuta 30-minutiline kõne: räägime läbi teie projekti, eesmärgid ja järgmised sammud.
+
+A free 30-minute call to talk through your project, goals and next steps.",
+  afterEventBuffer: 15,
+  metadata: eventTypeMetaDataSchemaWithTypedApps.parse({}),
+};
+
+export const defaultEvents = [dynamicEvent, kodarDiscoveryEvent];
 
 export const getDynamicEventDescription = (dynamicUsernames: string[], slug: string): string => {
   return `Book a ${slug} min event with ${dynamicUsernames.join(", ")}`;
