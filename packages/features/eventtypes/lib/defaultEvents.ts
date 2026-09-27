@@ -182,9 +182,7 @@ export const kodarDiscoveryEvent = {
   title: "Tutvumiskõne / Discovery call",
   eventName: "Tutvumiskõne / Discovery call",
   description:
-    "Tasuta 30-minutiline kõne: räägime läbi teie projekti, eesmärgid ja järgmised sammud.
-
-A free 30-minute call to talk through your project, goals and next steps.",
+    "Tasuta 30-minutiline kõne: räägime läbi teie projekti, eesmärgid ja järgmised sammud.\n\nA free 30-minute call to talk through your project, goals and next steps.",
   afterEventBuffer: 15,
   // Google Meet on the organizer's (first user's) Google Calendar. The generic
   // default is Cal Video, which needs a Daily.co key this instance does not have.
