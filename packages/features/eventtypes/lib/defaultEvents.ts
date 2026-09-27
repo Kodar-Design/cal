@@ -186,6 +186,9 @@ export const kodarDiscoveryEvent = {
 
 A free 30-minute call to talk through your project, goals and next steps.",
   afterEventBuffer: 15,
+  // Google Meet on the organizer's (first user's) Google Calendar. The generic
+  // default is Cal Video, which needs a Daily.co key this instance does not have.
+  locations: [{ type: "integrations:google:meet" }],
   metadata: eventTypeMetaDataSchemaWithTypedApps.parse({}),
 };
 
