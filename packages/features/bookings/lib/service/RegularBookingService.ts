@@ -1461,7 +1461,9 @@ async function handler(
   const attendeesList = [...invitee, ...guests];
 
   const responses = reqBody.responses || null;
-  const evtName = !eventType?.isDynamic ? eventType.eventName : responses?.title;
+  // Kodar: a group event with its own name (kodarDiscoveryEvent) keeps it when
+  // the booker was not asked for a title.
+  const evtName = !eventType?.isDynamic ? eventType.eventName : responses?.title || eventType.eventName;
   const eventNameObject = {
     //TODO: Can we have an unnamed attendee? If not, I would really like to throw an error here.
     attendeeName: fullName || "Nameless",

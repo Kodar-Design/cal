@@ -324,7 +324,9 @@ export const getPublicEvent = async (
       enabledLayouts: [...bookerLayoutOptions],
       defaultLayout: BookerLayouts.MONTH_VIEW,
     } as BookerLayoutSettings;
-    const disableBookingTitle = !defaultEvent.isDynamic;
+    // Kodar: events that carry their own title (kodarDiscoveryEvent) do not ask
+    // the booker to name the meeting.
+    const disableBookingTitle = !defaultEvent.isDynamic || "kodarFixedTitle" in defaultEvent;
     const unPublishedOrgUser = users.find((user) => user.profile?.organization?.slug === null);
 
     let orgDetails: Pick<Team, "logoUrl" | "name"> | undefined;

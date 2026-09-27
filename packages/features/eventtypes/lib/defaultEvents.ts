@@ -187,7 +187,13 @@ export const kodarDiscoveryEvent = {
   // Google Meet on the organizer's (first user's) Google Calendar. The generic
   // default is Cal Video, which needs a Daily.co key this instance does not have.
   locations: [{ type: "integrations:google:meet" }],
-  metadata: eventTypeMetaDataSchemaWithTypedApps.parse({}),
+  // One fixed length. Group links otherwise offer a 15–90 min picker.
+  metadata: eventTypeMetaDataSchemaWithTypedApps.parse({
+    multipleDuration: [30],
+    hideDurationSelectorInBookingPage: true,
+  }),
+  // Named by us, not by the booker: no "what is this meeting about" field.
+  kodarFixedTitle: true,
 };
 
 export const defaultEvents = [dynamicEvent, kodarDiscoveryEvent];
