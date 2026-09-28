@@ -48,5 +48,16 @@ jobs:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           CALENDSO_ENCRYPTION_KEY: ${{ secrets.CALENDSO_ENCRYPTION_KEY }}
           GOOGLE_API_CREDENTIALS: ${{ secrets.GOOGLE_API_CREDENTIALS }}
+      # The App table is not filled by migrations: self-hosted Cal expects
+      # seed-app-store to run once, and again when apps or their keys change.
+      # It upserts, so running it on every deploy is safe; without it the app
+      # store is empty and Google Calendar / Google Meet cannot be installed.
+      - name: Seed app store
+        run: yarn workspace @calcom/prisma seed-app-store
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_DIRECT_URL }}
+          DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
+          CALENDSO_ENCRYPTION_KEY: ${{ secrets.CALENDSO_ENCRYPTION_KEY }}
+          GOOGLE_API_CREDENTIALS: ${{ secrets.GOOGLE_API_CREDENTIALS }}
       - name: Deploy
         run: vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }}
