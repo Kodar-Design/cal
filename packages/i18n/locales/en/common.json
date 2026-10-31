@@ -691,6 +691,7 @@
   "invalid_password_hint": "The password must be a minimum of {{passwordLength}} characters long containing at least one number and have a mixture of uppercase and lowercase letters",
   "incorrect_password": "Password is incorrect.",
   "incorrect_email_password": "Email or password is incorrect.",
+  "totp_login_token_expired": "Your sign-in timed out. Please start again.",
   "compliance": "Compliance",
   "compliance_description": "Access compliance documents, certifications, and data protection agreements",
   "data_privacy": "Data privacy",

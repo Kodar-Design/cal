@@ -50,6 +50,7 @@ export default function Login({
   samlTenantID,
   samlProductID,
   totpEmail,
+  totpLoginToken,
 }: PageProps) {
   const searchParams = useCompatSearchParams();
   const { t } = useLocale();
@@ -78,6 +79,7 @@ export default function Login({
     [ErrorCode.IncorrectTwoFactorCode]: `${t("incorrect_2fa_code")} ${t("please_try_again")}`,
     [ErrorCode.InternalServerError]: `${t("something_went_wrong")} ${t("please_try_again_and_contact_us")}`,
     [ErrorCode.ThirdPartyIdentityProviderEnabled]: t("account_created_with_identity_provider"),
+    [ErrorCode.TotpLoginTokenExpired]: t("totp_login_token_expired"),
   };
 
   let callbackUrl = searchParams?.get("callbackUrl") || "";
@@ -150,6 +152,7 @@ export default function Login({
     // telemetry.event(telemetryEventTypes.login, collectPageParameters());
     const res = await signIn<"credentials">("credentials", {
       ...values,
+      ...(totpLoginToken ? { totpLoginToken } : {}),
       callbackUrl,
       redirect: false,
     });

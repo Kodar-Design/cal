@@ -47,6 +47,10 @@ vi.mock("@calcom/lib/totp", () => ({
   totpAuthenticatorCheck: vi.fn(),
 }));
 
+vi.mock("./verifyTotpLoginToken", () => ({
+  verifyTotpLoginToken: vi.fn(),
+}));
+
 vi.mock("@calcom/lib/crypto", () => ({
   symmetricDecrypt: vi.fn(),
   symmetricEncrypt: vi.fn(),
@@ -100,6 +104,9 @@ vi.mock("@calcom/features/profile/repositories/ProfileRepository", () => ({
 describe("CredentialsProvider authorize", () => {
   let authorizeCredentials: typeof import("./next-auth-options").authorizeCredentials;
   let verifyPassword: any;
+  let verifyTotpLoginToken: any;
+  let totpAuthenticatorCheck: any;
+  let symmetricDecrypt: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -107,6 +114,9 @@ describe("CredentialsProvider authorize", () => {
 
     const verifyPasswordModule = await import("./verifyPassword");
     verifyPassword = verifyPasswordModule.verifyPassword;
+    verifyTotpLoginToken = (await import("./verifyTotpLoginToken")).verifyTotpLoginToken;
+    totpAuthenticatorCheck = (await import("@calcom/lib/totp")).totpAuthenticatorCheck;
+    symmetricDecrypt = (await import("@calcom/lib/crypto")).symmetricDecrypt;
 
     // Import the exported authorize function directly
     const authModule = await import("./next-auth-options");
@@ -230,6 +240,124 @@ describe("CredentialsProvider authorize", () => {
           totpCode: "123456",
         } as any)
       ).rejects.toThrow(ErrorCode.IncorrectEmailPassword);
+    });
+  });
+
+  describe("Identity provider login with 2FA", () => {
+    const twoFactorUser = (overrides: Partial<any> = {}) =>
+      createMockUser({
+        password: null,
+        identityProvider: IdentityProvider.GOOGLE,
+        twoFactorEnabled: true,
+        twoFactorSecret: "encrypted-secret",
+        ...overrides,
+      });
+
+    beforeEach(() => {
+      process.env.CALENDSO_ENCRYPTION_KEY = "k".repeat(32);
+      symmetricDecrypt.mockReturnValue("s".repeat(32));
+    });
+
+    it("logs in with a valid token and TOTP code without a password", async () => {
+      mockFindByEmailAndIncludeProfilesAndPassword.mockResolvedValue(twoFactorUser());
+      verifyTotpLoginToken.mockResolvedValue("test@example.com");
+      totpAuthenticatorCheck.mockReturnValue(true);
+
+      const user = await authorizeCredentials({
+        email: "test@example.com",
+        totpCode: "123456",
+        totpLoginToken: "signed-token",
+      } as any);
+
+      expect(user).toBeTruthy();
+      expect(verifyPassword).not.toHaveBeenCalled();
+    });
+
+    it("also skips the password for a password user who signed in through the identity provider", async () => {
+      mockFindByEmailAndIncludeProfilesAndPassword.mockResolvedValue(
+        twoFactorUser({ password: { hash: "$2a$10$hashedpassword" } })
+      );
+      verifyTotpLoginToken.mockResolvedValue("test@example.com");
+      totpAuthenticatorCheck.mockReturnValue(true);
+
+      await expect(
+        authorizeCredentials({
+          email: "test@example.com",
+          totpCode: "123456",
+          totpLoginToken: "signed-token",
+        } as any)
+      ).resolves.toBeTruthy();
+      expect(verifyPassword).not.toHaveBeenCalled();
+    });
+
+    it("still requires a correct TOTP code with a valid token", async () => {
+      mockFindByEmailAndIncludeProfilesAndPassword.mockResolvedValue(twoFactorUser());
+      verifyTotpLoginToken.mockResolvedValue("test@example.com");
+      totpAuthenticatorCheck.mockReturnValue(false);
+
+      await expect(
+        authorizeCredentials({
+          email: "test@example.com",
+          totpCode: "000000",
+          totpLoginToken: "signed-token",
+        } as any)
+      ).rejects.toThrow(ErrorCode.IncorrectTwoFactorCode);
+    });
+
+    it("rejects an invalid or expired token", async () => {
+      mockFindByEmailAndIncludeProfilesAndPassword.mockResolvedValue(twoFactorUser());
+      verifyTotpLoginToken.mockResolvedValue(null);
+
+      await expect(
+        authorizeCredentials({
+          email: "test@example.com",
+          totpCode: "123456",
+          totpLoginToken: "bad-token",
+        } as any)
+      ).rejects.toThrow(ErrorCode.TotpLoginTokenExpired);
+    });
+
+    it("rejects a token issued for a different email", async () => {
+      mockFindByEmailAndIncludeProfilesAndPassword.mockResolvedValue(twoFactorUser());
+      verifyTotpLoginToken.mockResolvedValue("someone-else@example.com");
+
+      await expect(
+        authorizeCredentials({
+          email: "test@example.com",
+          totpCode: "123456",
+          totpLoginToken: "signed-token",
+        } as any)
+      ).rejects.toThrow(ErrorCode.IncorrectEmailPassword);
+    });
+
+    it("rejects a token for a user without 2FA", async () => {
+      mockFindByEmailAndIncludeProfilesAndPassword.mockResolvedValue(
+        twoFactorUser({ twoFactorEnabled: false })
+      );
+      verifyTotpLoginToken.mockResolvedValue("test@example.com");
+
+      await expect(
+        authorizeCredentials({
+          email: "test@example.com",
+          totpLoginToken: "signed-token",
+        } as any)
+      ).rejects.toThrow(ErrorCode.IncorrectEmailPassword);
+    });
+
+    it("keeps an admin active when signing in through the identity provider with 2FA", async () => {
+      mockFindByEmailAndIncludeProfilesAndPassword.mockResolvedValue(
+        twoFactorUser({ role: UserPermissionRole.ADMIN, identityProvider: IdentityProvider.CAL })
+      );
+      verifyTotpLoginToken.mockResolvedValue("test@example.com");
+      totpAuthenticatorCheck.mockReturnValue(true);
+
+      const user = (await authorizeCredentials({
+        email: "test@example.com",
+        totpCode: "123456",
+        totpLoginToken: "signed-token",
+      } as any)) as any;
+
+      expect(user.role).toBe(UserPermissionRole.ADMIN);
     });
   });
 });

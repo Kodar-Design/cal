@@ -690,6 +690,7 @@
   "invalid_password_hint": "Parool peab koosnema vähemalt {{passwordLength}} tähemärgist, sisaldama vähemalt ühte numbrit ning koosnema suur- ja väiketähtedest",
   "incorrect_password": "Parool on vale.",
   "incorrect_email_password": "E-post või parool on vale.",
+  "totp_login_token_expired": "Sisselogimine aegus. Palun alusta uuesti.",
   "compliance": "Vastavus",
   "compliance_description": "Juurdepääs vastavusdokumentidele, sertifikaatidele ja andmekaitselepingutele",
   "data_privacy": "Andmete privaatsus",
