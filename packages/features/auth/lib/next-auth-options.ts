@@ -56,6 +56,7 @@ import { dub } from "./dub";
 import { validateSamlAccountConversion } from "./samlAccountLinking";
 import CalComAdapter from "./next-auth-custom-adapter";
 import { verifyPassword } from "./verifyPassword";
+import { verifyTotpLoginToken } from "./verifyTotpLoginToken";
 import { UserProfile } from "@calcom/types/UserProfile";
 
 type UserWithProfiles = NonNullable<
@@ -146,7 +147,7 @@ const checkIfUserShouldBelongToOrg = async (idP: IdentityProvider, email: string
  * Extracted for testability
  */
 export async function authorizeCredentials(
-  credentials: Record<"email" | "password" | "totpCode" | "backupCode", string> | undefined
+  credentials: Record<"email" | "password" | "totpCode" | "backupCode" | "totpLoginToken", string> | undefined
 ): Promise<User | null> {
   log.debug("CredentialsProvider:credentials:authorize", safeStringify({ credentials }));
   if (!credentials) {
@@ -172,15 +173,29 @@ export async function authorizeCredentials(
     identifier: hashEmail(user.email),
   });
 
-  // Users without a password must use their identity provider (Google/SAML) to login
-  if (!user.password?.hash) {
-    throw new Error(ErrorCode.IncorrectEmailPassword);
-  }
+  // A user with 2FA who signed in through Google/SAML arrives here with a signed token instead of a
+  // password: the identity provider was the first factor, so only the second factor is left to check.
+  if (credentials.totpLoginToken) {
+    if (!user.twoFactorEnabled) {
+      throw new Error(ErrorCode.IncorrectEmailPassword);
+    }
+    const tokenEmail = await verifyTotpLoginToken(credentials.totpLoginToken);
+    if (!tokenEmail) {
+      throw new Error(ErrorCode.TotpLoginTokenExpired);
+    }
+    if (tokenEmail.toLowerCase() !== user.email.toLowerCase()) {
+      throw new Error(ErrorCode.IncorrectEmailPassword);
+    }
+  } else {
+    // Users without a password must use their identity provider (Google/SAML) to login
+    if (!user.password?.hash) {
+      throw new Error(ErrorCode.IncorrectEmailPassword);
+    }
 
-  // Always verify password for users who have one
-  const isCorrectPassword = await verifyPassword(credentials.password, user.password.hash);
-  if (!isCorrectPassword) {
-    throw new Error(ErrorCode.IncorrectEmailPassword);
+    const isCorrectPassword = await verifyPassword(credentials.password, user.password.hash);
+    if (!isCorrectPassword) {
+      throw new Error(ErrorCode.IncorrectEmailPassword);
+    }
   }
 
   if (user.twoFactorEnabled && credentials.backupCode) {
@@ -253,6 +268,8 @@ export async function authorizeCredentials(
       return role;
     }
 
+    // Signed in through Google/SAML plus 2FA: there is no password here to check the strength of
+    if (credentials.totpLoginToken && user.twoFactorEnabled) return role;
     // User's password is valid and two-factor authentication is enabled
     if (isPasswordValid(credentials.password, false, true) && user.twoFactorEnabled) return role;
     // Code is running in a development environment
@@ -274,6 +291,7 @@ export const CalComCredentialsProvider = CredentialsProvider({
     password: { label: "Password", type: "password", placeholder: "Your super secure password" },
     totpCode: { label: "Two-factor Code", type: "input", placeholder: "Code from authenticator app" },
     backupCode: { label: "Backup Code", type: "input", placeholder: "Two-factor backup code" },
+    totpLoginToken: { label: "Identity provider login token", type: "hidden" },
   },
   authorize: authorizeCredentials,
 });
